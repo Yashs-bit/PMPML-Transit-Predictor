@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Auth from './Auth'
 import axios from 'axios'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
-import { CloudRain, Sun } from 'lucide-react'
+import { CloudRain, Sun, BotMessageSquare, X, Send, Loader2 } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css'
 import 'leaflet-routing-machine'
@@ -59,6 +59,145 @@ function GlassCard({ children, style }) {
     <div className="glass-card" style={{ padding: '28px', ...style }}>
       {children}
     </div>
+  )
+}
+
+// ── Transit Assistant (AI Chat Widget) ───────────────────────────────────────
+function TransitAssistant({ token }) {
+  const [isOpen, setIsOpen]     = useState(false)
+  const [messages, setMessages] = useState([
+    { role: 'assistant', text: 'Hi! I\'m your PMPML Transit Assistant 🚌\nAsk me about routes, congestion, or travel tips in Pune!' }
+  ])
+  const [input, setInput]       = useState('')
+  const [isTyping, setIsTyping] = useState(false)
+  const messagesEndRef           = useRef(null)
+  const inputRef                 = useRef(null)
+
+  // Auto-scroll to latest message
+  useEffect(() => {
+    if (isOpen) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, isTyping, isOpen])
+
+  // Focus input when window opens
+  useEffect(() => {
+    if (isOpen) setTimeout(() => inputRef.current?.focus(), 120)
+  }, [isOpen])
+
+  const handleSend = async () => {
+    const text = input.trim()
+    if (!text || isTyping) return
+
+    // Append user message
+    setMessages(prev => [...prev, { role: 'user', text }])
+    setInput('')
+    setIsTyping(true)
+
+    try {
+      const res = await axios.post(
+        'http://localhost:5000/api/chat',
+        { message: text },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      const reply = res.data?.reply || res.data?.response || 'Sorry, I didn\'t get a response.'
+      setMessages(prev => [...prev, { role: 'assistant', text: reply }])
+    } catch (err) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        text: '⚠️ Couldn\'t reach the assistant. Please check that the backend is running.',
+        isError: true,
+      }])
+    } finally {
+      setIsTyping(false)
+    }
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
+  }
+
+  return (
+    <>
+      {/* ── Chat Window ── */}
+      <div className={`ta-window${isOpen ? ' ta-window--open' : ''}`} aria-hidden={!isOpen} role="dialog" aria-label="Transit Assistant">
+        {/* Header */}
+        <div className="ta-header">
+          <div className="ta-header-info">
+            <div className="ta-avatar">
+              <BotMessageSquare size={18} />
+            </div>
+            <div>
+              <p className="ta-header-title">Transit Assistant</p>
+              <p className="ta-header-sub">Powered by AI · PMPML</p>
+            </div>
+          </div>
+          <button id="ta-close-btn" className="ta-icon-btn" onClick={() => setIsOpen(false)} aria-label="Close chat">
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Messages */}
+        <div className="ta-messages" role="log" aria-live="polite">
+          {messages.map((msg, i) => (
+            <div key={i} className={`ta-bubble-row ${msg.role === 'user' ? 'ta-bubble-row--user' : 'ta-bubble-row--bot'}`}>
+              <div className={`ta-bubble${
+                msg.role === 'user' ? ' ta-bubble--user' : ' ta-bubble--bot'
+              }${msg.isError ? ' ta-bubble--error' : ''}`}>
+                {msg.text}
+              </div>
+            </div>
+          ))}
+
+          {/* Typing Indicator */}
+          {isTyping && (
+            <div className="ta-bubble-row ta-bubble-row--bot">
+              <div className="ta-bubble ta-bubble--bot ta-bubble--typing">
+                <span /><span /><span />
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input Row */}
+        <div className="ta-input-row">
+          <input
+            id="ta-chat-input"
+            ref={inputRef}
+            className="ta-input"
+            type="text"
+            placeholder="Ask about routes or congestion…"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isTyping}
+            aria-label="Chat message input"
+          />
+          <button
+            id="ta-send-btn"
+            className="ta-send-btn"
+            onClick={handleSend}
+            disabled={isTyping || !input.trim()}
+            aria-label="Send message"
+          >
+            {isTyping
+              ? <Loader2 size={16} className="ta-spin" />
+              : <Send size={16} />}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Floating Trigger Button ── */}
+      <button
+        id="ta-trigger-btn"
+        className={`ta-trigger${isOpen ? ' ta-trigger--active' : ''}`}
+        onClick={() => setIsOpen(o => !o)}
+        aria-label="Toggle Transit Assistant"
+        aria-expanded={isOpen}
+      >
+        <BotMessageSquare size={20} className="ta-trigger-icon" />
+        <span className="ta-trigger-label">Transit Assistant</span>
+      </button>
+    </>
   )
 }
 
@@ -330,10 +469,10 @@ function App() {
           <div className="animate-slide-up-delay" style={{height:'520px'}}>
             <div className="map-glass-wrapper" style={{height:'100%'}}>
               <MapContainer center={mapCenter} zoom={11} style={{height:'100%',width:'100%'}}>
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
+              <TileLayer
+  attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
+  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              />
                 {originStop && (
                   <Marker position={originStop.coords}>
                     <Popup><strong>Origin:</strong> {originStop.name} (ID: {formData.stop_id_from})</Popup>
@@ -381,6 +520,9 @@ function App() {
 
       {/* ping keyframe for live dot */}
       <style>{`@keyframes ping{75%,100%{transform:scale(2);opacity:0}}`}</style>
+
+      {/* ── Transit Assistant Widget ── */}
+      <TransitAssistant token={token} />
     </div>
   )
 }
