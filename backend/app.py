@@ -1,3 +1,4 @@
+import google.generativeai as genai
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
@@ -221,7 +222,44 @@ def predict():
     })
 
 
+# ─── AI Transit Assistant Chat Route ──────────────────────────────────────────
+# --- THE REAL GEMINI AI ASSISTANT ROUTE ---
+@app.route('/api/chat', methods=['POST'])
+@jwt_required()
+def chat():
+    data = request.get_json()
+    user_message = data.get('message', '')
+
+    if not user_message:
+        return jsonify({"reply": "Please ask a question!"}), 400
+
+    try:
+        # STEP A: Apni API key yahan daalo
+        genai.configure(api_key="AIzaSyCLC0NFI00DOMhZmDHa_13rZkS8nQ5NN_U") 
+
+        # STEP B: Model select karo
+        model = genai.GenerativeModel('gemini-2.5-flash')
+
+        # STEP C: AI ko uska 'Role' (Personality) do
+        system_context = f"""
+        You are an expert PMPML Transit Assistant for Pune city. 
+        Your job is to help users with bus routes, timings, traffic, and travel tips. 
+        Keep your answers short, professional, and helpful (max 2-3 lines).
+        User's question: {user_message}
+        """
+
+        # STEP D: AI se response maango
+        response = model.generate_content(system_context)
+        
+        return jsonify({"reply": response.text})
+
+    except Exception as e:
+        print(f"AI Error: {e}")
+        return jsonify({"reply": "Sorry, my AI brain is resting right now. Try again!"}), 500
+
+
 if __name__ == '__main__':
     # use_reloader=False prevents the Werkzeug reloader from spawning a second
     # process that would race on the SQLite file and cause 'database is locked'.
     app.run(port=5000, debug=True, use_reloader=False)
+
