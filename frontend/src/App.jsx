@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Auth from './Auth'
 import axios from 'axios'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
@@ -58,6 +58,150 @@ function GlassCard({ children, style }) {
   return (
     <div className="glass-card" style={{ padding: '28px', ...style }}>
       {children}
+    </div>
+  )
+}
+
+// ── Transit Quotes Pool ───────────────────────────────────────────────────────
+const TRANSIT_QUOTES = [
+  { text: 'Predict the delay, reclaim your time.', author: 'PMPML AI' },
+  { text: 'Every second saved is a journey made better.', author: 'Transit Wisdom' },
+  { text: 'Smart transit begins with smart predictions.', author: 'Urban Mobility' },
+  { text: 'Know before you go — the city moves with you.', author: 'PMPML Predictor' },
+  { text: 'Turning data into departures, on time.', author: 'Pune Transit' },
+  { text: 'The best route is the one you\u2019re prepared for.', author: 'PMPML AI' },
+]
+
+// ── Splash / Welcome Screen ───────────────────────────────────────────────────
+function SplashScreen({ onDone }) {
+  const [phase, setPhase] = useState('enter')   // 'enter' | 'idle' | 'exit'
+  const quote = useRef(TRANSIT_QUOTES[Math.floor(Math.random() * TRANSIT_QUOTES.length)])
+
+  useEffect(() => {
+    // Hold for 3.6 s then fade-out over 0.8 s
+    const idleTimer = setTimeout(() => setPhase('idle'), 200)
+    const exitTimer = setTimeout(() => setPhase('exit'), 3800)
+    const doneTimer = setTimeout(() => onDone(), 4600)
+    return () => { clearTimeout(idleTimer); clearTimeout(exitTimer); clearTimeout(doneTimer) }
+  }, [onDone])
+
+  return (
+    <div className={`splash-root splash-root--${phase}`} aria-label="Welcome screen" role="dialog">
+
+      {/* ── Animated Orb Background ── */}
+      <div className="liquid-bg">
+        <div className="liquid-orb orb-1" /><div className="liquid-orb orb-2" />
+        <div className="liquid-orb orb-3" /><div className="liquid-orb orb-4" />
+        <div className="liquid-orb orb-5" /><div className="grid-overlay" />
+      </div>
+
+      {/* ── Bus Hero (CSS art + SVG) ── */}
+      <div className="splash-bus-wrap" aria-hidden="true">
+        {/* Glow halo behind bus */}
+        <div className="splash-bus-glow" />
+        {/* Inline SVG city bus silhouette */}
+        <svg className="splash-bus-svg" viewBox="0 0 520 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* Body */}
+          <rect x="10" y="40" width="500" height="110" rx="18" fill="url(#busBody)" />
+          {/* Roof stripe */}
+          <rect x="10" y="40" width="500" height="20" rx="14" fill="url(#roofStripe)" />
+          {/* Windows row */}
+          <rect x="40"  y="60" width="58" height="44" rx="8" fill="url(#winGlass)" opacity="0.85" />
+          <rect x="112" y="60" width="58" height="44" rx="8" fill="url(#winGlass)" opacity="0.85" />
+          <rect x="184" y="60" width="58" height="44" rx="8" fill="url(#winGlass)" opacity="0.85" />
+          <rect x="256" y="60" width="58" height="44" rx="8" fill="url(#winGlass)" opacity="0.85" />
+          <rect x="328" y="60" width="58" height="44" rx="8" fill="url(#winGlass)" opacity="0.85" />
+          <rect x="400" y="60" width="58" height="44" rx="8" fill="url(#winGlass)" opacity="0.85" />
+          {/* Door */}
+          <rect x="430" y="104" width="52" height="46" rx="6" fill="url(#doorGrad)" opacity="0.70" />
+          <line x1="456" y1="104" x2="456" y2="150" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
+          {/* Front headlight */}
+          <ellipse cx="22" cy="100" rx="8" ry="5" fill="#c4b5fd" opacity="0.9" filter="url(#glow)" />
+          {/* Rear light */}
+          <ellipse cx="498" cy="100" rx="6" ry="4" fill="#f87171" opacity="0.85" filter="url(#glow)" />
+          {/* Underbody skirt */}
+          <rect x="10" y="140" width="500" height="10" rx="4" fill="rgba(109,40,217,0.35)" />
+          {/* Wheel wells */}
+          <ellipse cx="90"  cy="158" rx="36" ry="22" fill="url(#wheelGrad)" />
+          <ellipse cx="90"  cy="158" rx="22" ry="13" fill="#0d0820" />
+          <ellipse cx="90"  cy="158" rx="10" ry="6"  fill="rgba(139,92,246,0.50)" />
+          <ellipse cx="420" cy="158" rx="36" ry="22" fill="url(#wheelGrad)" />
+          <ellipse cx="420" cy="158" rx="22" ry="13" fill="#0d0820" />
+          <ellipse cx="420" cy="158" rx="10" ry="6"  fill="rgba(139,92,246,0.50)" />
+          {/* Neon accent strip along bottom */}
+          <rect x="30" y="148" width="460" height="3" rx="2" fill="url(#neonStrip)" opacity="0.80" />
+
+          <defs>
+            <linearGradient id="busBody" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#1e0b4b" />
+              <stop offset="50%" stopColor="#2d1b69" />
+              <stop offset="100%" stopColor="#1e0b4b" />
+            </linearGradient>
+            <linearGradient id="roofStripe" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#6d28d9" />
+              <stop offset="50%" stopColor="#4f46e5" />
+              <stop offset="100%" stopColor="#7c3aed" />
+            </linearGradient>
+            <linearGradient id="winGlass" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(139,92,246,0.40)" />
+              <stop offset="100%" stopColor="rgba(79,70,229,0.15)" />
+            </linearGradient>
+            <linearGradient id="doorGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(109,40,217,0.55)" />
+              <stop offset="100%" stopColor="rgba(79,70,229,0.20)" />
+            </linearGradient>
+            <radialGradient id="wheelGrad" cx="50%" cy="40%" r="60%">
+              <stop offset="0%" stopColor="#3b3b5e" />
+              <stop offset="100%" stopColor="#1a1a2e" />
+            </radialGradient>
+            <linearGradient id="neonStrip" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%"   stopColor="transparent" />
+              <stop offset="20%"  stopColor="#a78bfa" />
+              <stop offset="50%"  stopColor="#c4b5fd" />
+              <stop offset="80%"  stopColor="#a78bfa" />
+              <stop offset="100%" stopColor="transparent" />
+            </linearGradient>
+            <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+          </defs>
+        </svg>
+        {/* Road line */}
+        <div className="splash-road" />
+      </div>
+
+      {/* ── Glass Card with Title + Quote ── */}
+      <div className="splash-card-wrap">
+        <div className="splash-glass-card">
+          {/* Specular top strip */}
+          <div className="splash-glass-shine" />
+
+          {/* Badge */}
+          <div className="splash-badge">🚌 PMPML · Pune</div>
+
+          {/* Title */}
+          <h1 className="splash-title">
+            <span className="splash-title-line">PMPML Transit</span>
+            <span className="splash-title-line splash-title-accent">Delay Predictor</span>
+          </h1>
+
+          {/* Quote */}
+          <div className="splash-divider" />
+          <blockquote className="splash-quote">
+            <span className="splash-quote-mark">&#8220;</span>
+            {quote.current.text}
+            <span className="splash-quote-mark">&#8221;</span>
+          </blockquote>
+          <p className="splash-quote-author">— {quote.current.author}</p>
+
+          {/* Loading bar */}
+          <div className="splash-progress-wrap">
+            <div className="splash-progress-bar" />
+          </div>
+          <p className="splash-loading-label">Initialising system&#8230;</p>
+        </div>
+      </div>
     </div>
   )
 }
@@ -203,6 +347,10 @@ function TransitAssistant({ token }) {
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 function App() {
+  // ── Splash Screen State ───────────────────────────────────────────────────
+  const [splashDone, setSplashDone] = useState(false)
+  const handleSplashDone = useCallback(() => setSplashDone(true), [])
+
   // Auth State (unchanged)
   const [token, setToken] = useState(() => localStorage.getItem('pmpml_token') || null)
   const savedUsername = localStorage.getItem('pmpml_username') || 'User'
@@ -286,6 +434,8 @@ function App() {
   const predLower   = prediction ? String(prediction).toLowerCase() : ''
   const resultClass = predLower.includes('heavy') ? 'heavy' : predLower.includes('moderate') ? 'moderate' : 'light'
 
+  // Show splash first, then Auth or Dashboard
+  if (!splashDone) return <SplashScreen onDone={handleSplashDone} />
   if (!token) return <Auth onLogin={setToken} />
 
   return (
